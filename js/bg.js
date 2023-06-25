@@ -37,7 +37,20 @@ function main() {
 			gridItems[i].style["border-radius"] = "1.5px";
 		}
 	}
+
+	window.addEventListener("resize", function() {
+		rowCount = Math.floor((colCount*window.innerHeight)/window.innerWidth);
+		boxSize = (window.innerWidth/colCount);
+		cssGrid.style["grid-template-columns"] = "repeat(" + colCount + ", minmax(" + boxSize + "px, 1fr))";
+		cssGrid.style["grid-template-rows"] = "repeat(" + rowCount + ", minmax(" + boxSize + "px, 1fr))";
+		var items = cssGrid.querySelectorAll("box");
+		items.forEach(box => { box.style["width"] = boxSize; box.style["height"] = boxSize} );
+		jsGrid.length += colCount - jsGrid.length;
+		jsGrid.forEach(col => col.length += rowCount - jsGrid[0].length);
+	}, true);
+
 	var newGrid;
+
 	const newFrame = (jsGrid, colCount, rowCount) => () => {
 		newGrid = structuredClone(jsGrid);
 
