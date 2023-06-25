@@ -236,4 +236,4 @@ function placeHershel(grid, x, y) {
 	return grid;
 }
 
-main();
+window.onload = main();
