@@ -1,140 +1,171 @@
+class Cell {
+	constructor(context, col, row, size) {
+		this.context = context;
+		this.column = col;
+		this.row = row;
+		this.size = size;
+
+		this.state = 0;
+		this.nextState = 0;
+	}
+
+	draw() {
+		this.context.beginPath();
+		this.context.roundRect(this.column * this.size, this.row * this.size, this.size, this.size, 0);
+		this.context.fill();
+		this.context.stroke();
+	}
+
+	transitionState() {
+		this.state = this.nextState;
+		this.nextState = 0;
+		if (this.state == 1) {
+			this.draw();
+		}
+	}
+}
+
 function main() {
+	// init variables
 	const root = document.querySelector(":root");
 	var colCount = Number(getComputedStyle(root).getPropertyValue("--number-of-boxes-horizontal"));
 	var rowCount = Math.floor((colCount*window.innerHeight)/window.innerWidth);
-	var bgcolor = getComputedStyle(root).getPropertyValue("--bg-color");
-	var boxcolor = getComputedStyle(root).getPropertyValue("--box-color");
 	var boxSize = (window.innerWidth/colCount);
+	var aliveColour = getComputedStyle(root).getPropertyValue("--alive-colour");
+	var deadColour = getComputedStyle(root).getPropertyValue("--dead-colour");
+	var canvasOffset = (window.innerHeight - (rowCount*boxSize))/2;
 
-	const cssGrid = document.createElement("header");
-	cssGrid.className = "grid";
-	cssGrid.style["grid-template-columns"] = "repeat(" + colCount + ", minmax(" + boxSize + "px, 1fr))";
-	cssGrid.style["grid-template-rows"] = "repeat(" + rowCount + ", minmax(" + boxSize + "px, 1fr))";
-	document.getElementsByTagName('body')[0].appendChild(cssGrid);
 
-	populateCSSGrid(cssGrid, bgcolor, boxSize, colCount, rowCount);
+	const bgCanvas = document.createElement("canvas");
+	bgCanvas.id = "bg";
+	bgCanvas.width = window.innerWidth;
+	bgCanvas.height = window.innerHeight - canvasOffset;
+	bgCanvas.style["top"] = canvasOffset+"px";
+	document.getElementsByTagName('body')[0].appendChild(bgCanvas);
+	var bgcxt = bgCanvas.getContext("2d");
+	bgcxt.fillStyle = deadColour;
+	bgcxt.lineWidth = 0;
+
+	// create HTML5 canvas
+	const aliveCanvas = document.createElement("canvas");
+	aliveCanvas.id = "bg";
+	aliveCanvas.width = window.innerWidth;
+	aliveCanvas.height = window.innerHeight - canvasOffset;
+	aliveCanvas.style["top"] = canvasOffset+"px";
+	document.getElementsByTagName('body')[0].appendChild(aliveCanvas);
+	var cxt = aliveCanvas.getContext("2d");
+	cxt.fillStyle = aliveColour;
+	cxt.lineWidth = 0;
+	cxt.filter = "drop-shadow(0px 0px 10px "+ aliveColour+")";
+
+
+	// create js grid of cell objects
+	var jsGrid = new Array(colCount);
+	for (var col = 0; col < colCount; col++) {
+		jsGrid[col] = new Array(rowCount);
+		for (var row = 0; row < rowCount; row++) {
+			jsGrid[col][row] = new Cell(cxt, col, row, boxSize);
+			bgcxt.beginPath();
+			bgcxt.roundRect(col * boxSize, row * boxSize, boxSize, boxSize, 0);
+			bgcxt.fill();
+			bgcxt.stroke();
+		}
+	}
 
 	randomNums = Array(10);
 	for (i = 0; i < 10; i++) {
 		randomNums[i] = Math.random();
 	}
-	var jsGrid = createGrid(colCount, rowCount);
-	jsGrid = placeGlider(jsGrid, Math.floor(colCount*randomNums[0]), Math.floor(rowCount*randomNums[1]));
-	jsGrid = placeLWSpaceship(jsGrid, Math.floor(colCount*randomNums[2]), Math.floor(rowCount*randomNums[3]));
-	jsGrid = placeMWSpaceship(jsGrid, Math.floor(colCount*randomNums[4]), Math.floor(rowCount*randomNums[5]));
-	jsGrid = placeAngel(jsGrid, Math.floor(colCount*randomNums[6]), Math.floor(colCount*randomNums[7]));
-	jsGrid = placeHershel(jsGrid, Math.floor(colCount*randomNums[8]), Math.floor(rowCount*randomNums[9]));
-	var gridItems = document.getElementsByClassName("box");
-
-	// apply js grid to css grid
-	for (i = 0; i < gridItems.length; i++) {
-		var state = jsGrid[i % colCount][Math.floor(i / colCount)];
-		if (state == 0) {
-			gridItems[i].style["background-color"] = bgcolor;
-			gridItems[i].style["border-radius"] = "0";
-		} else {
-			gridItems[i].style["background-color"] = boxcolor;
-			gridItems[i].style["border-radius"] = "1.5px";
-		}
-	}
+	placeGlider(jsGrid, Math.floor(colCount*randomNums[0]), Math.floor(rowCount*randomNums[1]));
+	placeLWSpaceship(jsGrid, Math.floor(colCount*randomNums[2]), Math.floor(rowCount*randomNums[3]));
+	placeMWSpaceship(jsGrid, Math.floor(colCount*randomNums[4]), Math.floor(rowCount*randomNums[5]));
+	placeAngel(jsGrid, Math.floor(colCount*randomNums[6]), Math.floor(colCount*randomNums[7]));
+	placeHershel(jsGrid, Math.floor(colCount*randomNums[8]), Math.floor(rowCount*randomNums[9]));
+	
+	jsGrid.forEach(col => {
+		col.forEach(cell => {
+			cell.transitionState();
+		})
+	});
 
 	window.addEventListener("resize", function() {
-		rowCount = Math.floor((colCount*window.innerHeight)/window.innerWidth);
+		var newRowCount = Math.floor((colCount*window.innerHeight)/window.innerWidth);
 		boxSize = (window.innerWidth/colCount);
-		cssGrid.style["grid-template-columns"] = "repeat(" + colCount + ", minmax(" + boxSize + "px, 1fr))";
-		cssGrid.style["grid-template-rows"] = "repeat(" + rowCount + ", minmax(" + boxSize + "px, 1fr))";
-		var items = cssGrid.querySelectorAll("box");
-		items.forEach(box => { box.style["width"] = boxSize; box.style["height"] = boxSize} );
-		jsGrid.length += colCount - jsGrid.length;
-		jsGrid.forEach(col => col.length += rowCount - jsGrid[0].length);
-	}, true);
-
-	var newGrid;
-
-	const newFrame = (jsGrid, colCount, rowCount) => () => {
-		newGrid = structuredClone(jsGrid);
-
-		// update js grid data structure
+		bgcxt.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+		cxt.clearRect(0, 0, aliveCanvas.width, aliveCanvas.height);
+		canvasOffset = (window.innerHeight - (newRowCount*boxSize))/2;
+		bgCanvas.width = window.innerWidth;
+		bgCanvas.height = window.innerHeight - canvasOffset;
+		bgCanvas.style["top"] = canvasOffset+"px";
+		aliveCanvas.width = window.innerWidth;
+		aliveCanvas.height = window.innerHeight - canvasOffset;
+		aliveCanvas.style["top"] = canvasOffset+"px";
+		bgcxt = bgCanvas.getContext("2d");
+		bgcxt.fillStyle = deadColour;
+		bgcxt.lineWidth = 0;
+		cxt = aliveCanvas.getContext("2d");
+		cxt.fillStyle = aliveColour;
+		cxt.lineWidth = 0;
+		cxt.filter = "drop-shadow(0px 0px 10px "+ aliveColour+")";
+		
+		// create js grid of cell objects
+		var newGrid = new Array(colCount);
 		for (var col = 0; col < colCount; col++) {
-			for (var row = 0; row < rowCount; row++) {
-				var state = newGrid[col][row] = checkNeighbours(jsGrid, col, row);
-				var i = row*colCount + col;
-				if (state == 0 && jsGrid[col][row] == 1) {
-					gridItems[i].style["background-color"] = bgcolor;
-					gridItems[i].style["border-radius"] = "0";
-				} else if (state == 1 && jsGrid[col][row] == 0) {
-					gridItems[i].style["background-color"] = boxcolor;
-					gridItems[i].style["border-radius"] = "1.5px";
+			newGrid[col] = new Array(newRowCount);
+			for (var row = 0; row < newRowCount; row++) {
+				if (row < rowCount) {
+					newGrid[col][row] = jsGrid[col][row];
+					newGrid[col][row].size = boxSize;
+					newGrid[col][row].context = cxt;
+				} else {
+					newGrid[col][row] = new Cell(cxt, col, row, boxSize);
 				}
+				bgcxt.beginPath();
+				bgcxt.roundRect(col * boxSize, row * boxSize, boxSize, boxSize, 0);
+				bgcxt.fill();
+				bgcxt.stroke();
 			}
 		}
 		jsGrid = newGrid;
-	};
+		rowCount = newRowCount;
+	}, true);
 
-	setInterval(newFrame(jsGrid, colCount, rowCount), 100);
+	setInterval(function() {
+		jsGrid.forEach(col => {
+			col.forEach(cell => {
+				cell.nextState = checkNeighbours(jsGrid, cell);
+			})
+		});
+
+		cxt.clearRect(0, 0, aliveCanvas.width, aliveCanvas.height);
+		
+		jsGrid.forEach(col => {
+			col.forEach(cell => {
+				cell.transitionState();
+			})
+		});
+	}, 100);
 }
 
-function populateCSSGrid(cssGrid, bgcolor, boxSize, colCount, rowCount) {
-	
-	for (i = 0; i < colCount; i++) {
-		for (j = 0; j < rowCount; j++) {
-			var box = document.createElement("div");
-			box.className = "box";
-			box.style["width"] = boxSize;
-			box.style["height"] = boxSize;
-			box.style["background-color"] = bgcolor;
-			//box.textContent = (i*rowCount)+j; //+ " (" + ((j+i*rowCount) % colCount) +","+ Math.floor((j+i*rowCount)/colCount)+")";
-			cssGrid.appendChild(box);
-		}
-	}
-}
-
-
-function getCSSGridElementPosition(index) {
-
-	let offset = -1;
-
-	if (isNaN(offset)) {
-		offset = 0;
-	}
-	const colCount = document.querySelectorAll(".box").length;
-
-	const rowPos = Math.floor((index + offset) / colCount);
-	const colPos = (index + offset) % colCount;
-
-	return { x: rowPos, y: colPos };
-}
-
-function createGrid(x, y) {
-	var grid = new Array(x);
-	for (var row = 0; row < x; row++) {
-		var newRow = new Array(y);
-		for (var col = 0; col < y; col++) {
-			newRow[col] = 0;
-		}
-		grid[row] = newRow;
-	}
-
-	return grid;
-}
-
-function checkNeighbours(grid, col, row) {
+function checkNeighbours(grid, cell) {
+	var col = cell.column;
+	var row = cell.row;
 	var total = 0;
 	for (i = -1; i < 2; i++) {
 		for (j = -1; j < 2; j++) {
-			total += returnValue(grid, col+i, row+j);
+			total += getCellState(grid, col+i, row+j);
 		}
 	}
-	total -= grid[col][row];
+	total -= grid[col][row].state;
 
-	if (total == 3 || (total == 2 && grid[col][row] == 1)) {
+	if (total == 3 || (total == 2 && grid[col][row].state == 1)) {
 		return 1;
 	} else {
 		return 0;
 	}
 }
 
-function returnValue(grid, col, row) {
+function getCellState(grid, col, row) {
 	if (col < 0) {
 		col = grid.length + col;
 	}
@@ -149,10 +180,10 @@ function returnValue(grid, col, row) {
 		row = row % (grid[0].length);
 	}
 
-	return grid[col][row];
+	return grid[col][row].state;
 }
 
-function setValue(grid, col, row, value) {
+function setNextCellState(grid, col, row, value) {
 	if (col < 0) {
 		col = grid.length + col;
 	}
@@ -167,73 +198,62 @@ function setValue(grid, col, row, value) {
 		row = row % (grid[0].length);
 	}
 
-	grid[col][row] = value;
-	return grid;
+	grid[col][row].nextState = value;
 }
 
 function placeGlider(grid, x, y) {
-	grid = setValue(grid, x, y+1, 1);
-	grid = setValue(grid, x+1, y+2, 1);
-	grid = setValue(grid, x+2, y, 1);
-	grid = setValue(grid, x+2, y+1, 1);
-	grid = setValue(grid, x+2, y+2, 1);
-
-	return grid;
+	setNextCellState(grid, x, y+1, 1);
+	setNextCellState(grid, x+1, y+2, 1);
+	setNextCellState(grid, x+2, y, 1);
+	setNextCellState(grid, x+2, y+1, 1);
+	setNextCellState(grid, x+2, y+2, 1);
 }
 
 function placeLWSpaceship(grid, x, y) {
-	grid = setValue(grid, x, y+1, 1);
-	grid = setValue(grid, x, y+2, 1);
-	grid = setValue(grid, x, y+3, 1);
-	grid = setValue(grid, x+1, y, 1);
-	grid = setValue(grid, x+1, y+3, 1);
-	grid = setValue(grid, x+2, y+3, 1);
-	grid = setValue(grid, x+3, y+3, 1);
-	grid = setValue(grid, x+4, y, 1);
-	grid = setValue(grid, x+4, y+2, 1);
-
-	return grid;
+	setNextCellState(grid, x, y+1, 1);
+	setNextCellState(grid, x, y+2, 1);
+	setNextCellState(grid, x, y+3, 1);
+	setNextCellState(grid, x+1, y, 1);
+	setNextCellState(grid, x+1, y+3, 1);
+	setNextCellState(grid, x+2, y+3, 1);
+	setNextCellState(grid, x+3, y+3, 1);
+	setNextCellState(grid, x+4, y, 1);
+	setNextCellState(grid, x+4, y+2, 1);
 }
 
 function placeMWSpaceship(grid, x, y) {
-	grid = setValue(grid, x, y+2, 1);
-	grid = setValue(grid, x, y+3, 1);
-	grid = setValue(grid, x, y+4, 1);
-	grid = setValue(grid, x+1, y+1, 1);
-	grid = setValue(grid, x+1, y+4, 1);
-	grid = setValue(grid, x+2, y+4, 1);
-	grid = setValue(grid, x+3, y, 1);
-	grid = setValue(grid, x+3, y+4, 1);
-	grid = setValue(grid, x+4, y+4, 1);
-	grid = setValue(grid, x+5, y+1, 1);
-	grid = setValue(grid, x+5, y+3, 1);
-
-	return grid;
+	setNextCellState(grid, x, y+2, 1);
+	setNextCellState(grid, x, y+3, 1);
+	setNextCellState(grid, x, y+4, 1);
+	setNextCellState(grid, x+1, y+1, 1);
+	setNextCellState(grid, x+1, y+4, 1);
+	setNextCellState(grid, x+2, y+4, 1);
+	setNextCellState(grid, x+3, y, 1);
+	setNextCellState(grid, x+3, y+4, 1);
+	setNextCellState(grid, x+4, y+4, 1);
+	setNextCellState(grid, x+5, y+1, 1);
+	setNextCellState(grid, x+5, y+3, 1);
 }
 
 function placeAngel(grid, x, y) {
-	grid = setValue(grid, x, y+1, 1);
-	grid = setValue(grid, x+1, y+1, 1);
-	grid = setValue(grid, x+1, y+2, 1);
-	grid = setValue(grid, x+2, y, 1);
-	grid = setValue(grid, x+2, y+3, 1);
-	grid = setValue(grid, x+3, y+1, 1);
-	grid = setValue(grid, x+3, y+2, 1);
-	grid = setValue(grid, x+4, y+1, 1);
-
-	return grid;
+	setNextCellState(grid, x, y+1, 1);
+	setNextCellState(grid, x+1, y+1, 1);
+	setNextCellState(grid, x+1, y+2, 1);
+	setNextCellState(grid, x+2, y, 1);
+	setNextCellState(grid, x+2, y+3, 1);
+	setNextCellState(grid, x+3, y+1, 1);
+	setNextCellState(grid, x+3, y+2, 1);
+	setNextCellState(grid, x+4, y+1, 1);
 }
 
 function placeHershel(grid, x, y) {
-	grid = setValue(grid, x, y, 1);
-	grid = setValue(grid, x, y+1, 1);
-	grid = setValue(grid, x, y+2, 1);
-	grid = setValue(grid, x+1, y+1, 1);
-	grid = setValue(grid, x+2, y+1, 1);
-	grid = setValue(grid, x+2, y+2, 1);
-	grid = setValue(grid, x+2, y+3, 1);
-
-	return grid;
+	setNextCellState(grid, x, y, 1);
+	setNextCellState(grid, x, y+1, 1);
+	setNextCellState(grid, x, y+2, 1);
+	setNextCellState(grid, x+1, y+1, 1);
+	setNextCellState(grid, x+2, y+1, 1);
+	setNextCellState(grid, x+2, y+2, 1);
+	setNextCellState(grid, x+2, y+3, 1);
 }
 
 window.onload = main();
