@@ -11,11 +11,12 @@ body {
 .title {
     align-self: center;
     text-align: left;
-    left: 24px;
+    padding-left: 24px;
     position: relative;
     font-size: 36px;
     color: white;
     font-family: arial;
+    text-shadow: 0px 0px 4px #0e0b0b;
 }
 
 .grid {
@@ -45,6 +46,7 @@ ul {
 
 li {
     display: inline-block;
+    text-align: center;
 }
 
 .nav {
@@ -59,8 +61,44 @@ li {
     text-decoration: none;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-weight: bold;
+    text-shadow: 0px 0px 4px #0e0b0b;
+    background-color: #0e0b0b93;
 }
 .nav a:hover {
     color: var(--bg-color);
     background-color: white;
+    text-shadow: 0px 0px 0px #0e0b0b;
+}
+
+.nav a:active {
+    text-decoration: line-through;
+    text-decoration-thickness: 5px;
+}
+
+.body {
+    padding-top: 50px;
+    border-radius: 5px;
+    background-color: #0e0b0b93;
+    align-self: center;
+    text-align: left;
+    top: 24px;
+    padding-left: 24px;
+    position: relative;
+    color: white;
+    font-family: arial;
+    display: inline-block;
+    list-style-type: none;
+    left: 24px;
+    margin: 0;
+    padding: 10px;
+    text-shadow: 0px 0px 4px #0e0b0b;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.body a {
+    color: white;
+    text-align: left;
+    padding: 8px 24px;
+    text-decoration: none;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
